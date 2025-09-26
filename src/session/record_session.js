@@ -31,6 +31,7 @@ class NodeRecordSession extends BaseSession {
     this.streamPath = session.streamPath;
     this.filePath = filePath;
     this.fileStream = this.createWriteStreamWithDirsSync(filePath);
+    this.isPaused = false;
     /**@type {BroadcastServer} */
     this.broadcast = Context.broadcasts.get(this.streamPath) ?? new BroadcastServer();
     Context.broadcasts.set(this.streamPath, this.broadcast);
@@ -65,10 +66,43 @@ class NodeRecordSession extends BaseSession {
    * @param {Buffer} buffer
    */
   sendBuffer = (buffer) => {
-    this.outBytes += buffer.length;
-    this.fileStream.write(buffer);
+    if (!this.isPaused) {
+      this.outBytes += buffer.length;
+      this.fileStream.write(buffer);
+    }
   };
 
+  /**
+   * 暂停录制
+   */
+  pause() {
+    if (this.isPaused) {
+      throw new Error("Record session is already paused");
+    }
+    this.isPaused = true;
+    logger.info(`Record session ${this.id} ${this.streamPath} paused`);
+  }
+
+  /**
+   * 恢复录制
+   */
+  resume() {
+    if (!this.isPaused) {
+      throw new Error("Record session is not paused");
+    }
+    this.isPaused = false;
+    logger.info(`Record session ${this.id} ${this.streamPath} resumed`);
+  }
+
+  /**
+   * 停止录制
+   */
+  stop() {
+    this.fileStream.close();
+    this.broadcast.donePlay(this);
+    logger.info(`Record session ${this.id} ${this.streamPath} stopped`);
+    Context.eventEmitter.emit("doneRecord", this);
+  }
 };
 
 module.exports = NodeRecordSession;

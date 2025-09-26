@@ -13,9 +13,11 @@ const express = require("express");
 const logger = require("../core/logger.js");
 const FlvSession = require("../session/flv_session.js");
 const http2Express = require("../vendor/http2-express");
+const NodeRecordApiServer = require("./record_api_server.js");
 
 class NodeHttpServer {
   constructor(config) {
+    /**@type {any} */
     this.config = config;
     const app = http2Express(express);
 
@@ -23,6 +25,10 @@ class NodeHttpServer {
       // @ts-ignore
       app.use(config.static.router, express.static(config.static.root));
     }
+    
+    // 初始化录制控制API服务
+    const recordApiServer = new NodeRecordApiServer(config);
+    recordApiServer.attachToApp(app);
 
     // @ts-ignore
     app.use(cors());
