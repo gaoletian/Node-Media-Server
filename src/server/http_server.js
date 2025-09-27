@@ -30,8 +30,18 @@ class NodeHttpServer {
     const recordApiServer = new NodeRecordApiServer(config);
     recordApiServer.attachToApp(app);
 
+    // 配置CORS
     // @ts-ignore
-    app.use(cors());
+    app.use(cors({
+      origin: config.http?.cors?.origin || '*', // 允许的源，默认允许所有
+      methods: config.http?.cors?.methods || ['GET', 'POST', 'OPTIONS'], // 允许的HTTP方法
+      allowedHeaders: config.http?.cors?.allowedHeaders || ['Content-Type', 'Authorization'], // 允许的请求头
+      credentials: config.http?.cors?.credentials || true // 允许携带凭证
+    }));
+
+    // 处理 OPTIONS 请求
+    // @ts-ignore
+    app.options('*', cors());
 
     // @ts-ignore
     app.all("/:app/:name.flv", this.handleFlv);
