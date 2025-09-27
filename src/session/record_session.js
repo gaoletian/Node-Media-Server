@@ -36,6 +36,10 @@ class NodeRecordSession extends BaseSession {
     this.totalPausedTime = 0;
     this.lastVideoTimestamp = 0;
     this.lastAudioTimestamp = 0;
+    this.startTime = 0;
+    this.hasVideoKeyFrame = false;
+    this.firstVideoTimestamp = 0;
+    this.firstAudioTimestamp = 0;
     /**@type {BroadcastServer} */
     this.broadcast = Context.broadcasts.get(this.streamPath) ?? new BroadcastServer();
     Context.broadcasts.set(this.streamPath, this.broadcast);
@@ -81,14 +85,39 @@ class NodeRecordSession extends BaseSession {
     // 检测包类型和时间戳
     if (buffer.length > 11) {  // FLV tag header size
       const tagType = buffer[0];  // 8:audio, 9:video, 18:script
+      
+      // 处理视频或音频标签
       if (tagType === 8 || tagType === 9) {
         // 读取时间戳 (24位)
         let timestamp = buffer.readUIntBE(4, 3);
+        let originalTimestamp = timestamp;
+
+        // 处理视频关键帧
+        if (tagType === 9 && !this.hasVideoKeyFrame) {
+          // 检查是否是关键帧 (读取 VIDEODATA 的 frametype，1=keyframe)
+          const frameType = (buffer[11] & 0xF0) >> 4;
+          if (frameType === 1) {
+            this.hasVideoKeyFrame = true;
+            this.firstVideoTimestamp = timestamp;
+            this.startTime = this.firstVideoTimestamp;
+          }
+        }
         
-        // 调整时间戳以补偿暂停时间
-        if (this.totalPausedTime > 0) {
-          timestamp -= this.totalPausedTime;
-          // 写回调整后的时间戳
+        // 记录第一个音频时间戳
+        if (tagType === 8 && this.firstAudioTimestamp === 0) {
+          this.firstAudioTimestamp = timestamp;
+          if (!this.hasVideoKeyFrame) {
+            this.startTime = this.firstAudioTimestamp;
+          }
+        }
+
+        // 调整时间戳
+        if (this.startTime > 0) {
+          // 减去开始时间和暂停时间
+          timestamp = timestamp - this.startTime - this.totalPausedTime;
+          if (timestamp < 0) timestamp = 0;
+
+          // 写回调整后的时间戳 (24位)
           buffer.writeUIntBE(timestamp, 4, 3);
           
           // 同步扩展时间戳 (8位)
@@ -97,9 +126,9 @@ class NodeRecordSession extends BaseSession {
 
         // 更新最后的时间戳
         if (tagType === 9) {
-          this.lastVideoTimestamp = timestamp;
+          this.lastVideoTimestamp = originalTimestamp;
         } else {
-          this.lastAudioTimestamp = timestamp;
+          this.lastAudioTimestamp = originalTimestamp;
         }
       }
     }
