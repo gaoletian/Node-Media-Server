@@ -32,6 +32,10 @@ class NodeRecordSession extends BaseSession {
     this.filePath = filePath;
     this.fileStream = this.createWriteStreamWithDirsSync(filePath);
     this.isPaused = false;
+    this.pauseStartTime = 0;
+    this.totalPausedTime = 0;
+    this.lastVideoTimestamp = 0;
+    this.lastAudioTimestamp = 0;
     /**@type {BroadcastServer} */
     this.broadcast = Context.broadcasts.get(this.streamPath) ?? new BroadcastServer();
     Context.broadcasts.set(this.streamPath, this.broadcast);
@@ -66,10 +70,38 @@ class NodeRecordSession extends BaseSession {
    * @param {Buffer} buffer
    */
   sendBuffer = (buffer) => {
-    if (!this.isPaused) {
-      this.outBytes += buffer.length;
-      this.fileStream.write(buffer);
+    if (this.isPaused) {
+      return;
     }
+
+    // 检测包类型和时间戳
+    if (buffer.length > 11) {  // FLV tag header size
+      const tagType = buffer[0];  // 8:audio, 9:video, 18:script
+      if (tagType === 8 || tagType === 9) {
+        // 读取时间戳 (24位)
+        let timestamp = buffer.readUIntBE(4, 3);
+        
+        // 调整时间戳以补偿暂停时间
+        if (this.totalPausedTime > 0) {
+          timestamp -= this.totalPausedTime;
+          // 写回调整后的时间戳
+          buffer.writeUIntBE(timestamp, 4, 3);
+          
+          // 同步扩展时间戳 (8位)
+          buffer[7] = (timestamp >> 24) & 0xFF;
+        }
+
+        // 更新最后的时间戳
+        if (tagType === 9) {
+          this.lastVideoTimestamp = timestamp;
+        } else {
+          this.lastAudioTimestamp = timestamp;
+        }
+      }
+    }
+
+    this.outBytes += buffer.length;
+    this.fileStream.write(buffer);
   };
 
   /**
@@ -80,6 +112,7 @@ class NodeRecordSession extends BaseSession {
       throw new Error("Record session is already paused");
     }
     this.isPaused = true;
+    this.pauseStartTime = Date.now();
     logger.info(`Record session ${this.id} ${this.streamPath} paused`);
   }
 
@@ -90,17 +123,26 @@ class NodeRecordSession extends BaseSession {
     if (!this.isPaused) {
       throw new Error("Record session is not paused");
     }
+    
+    // 计算本次暂停的时间（毫秒）
+    const pauseDuration = Date.now() - this.pauseStartTime;
+    this.totalPausedTime += Math.floor(pauseDuration);
+    
     this.isPaused = false;
-    logger.info(`Record session ${this.id} ${this.streamPath} resumed`);
+    this.pauseStartTime = 0;
+    logger.info(`Record session ${this.id} ${this.streamPath} resumed, pause duration: ${pauseDuration}ms, total paused: ${this.totalPausedTime}ms`);
   }
 
   /**
    * 停止录制
    */
   stop() {
-    this.fileStream.close();
-    this.broadcast.donePlay(this);
+    // 关闭文件流
+    this.fileStream.end();
+    // 从订阅者列表中移除此录制会话
+    this.broadcast.subscribers.delete(this.id);
     logger.info(`Record session ${this.id} ${this.streamPath} stopped`);
+    // 发送录制完成事件
     Context.eventEmitter.emit("doneRecord", this);
   }
 };

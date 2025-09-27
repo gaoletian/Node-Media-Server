@@ -26,11 +26,18 @@ class NodeRecordServer {
         return;
       }
       logger.info(`Record server start on the path ${this.config.record.path}`);
-      Context.eventEmitter.on("postPublish", (session) => {
-        let filePath = path.join(this.config.record.path, session.streamPath, Date.now() + ".flv");
-        let sess = new NodeRecordSession(session, filePath);
-        sess.run();
-      });
+      
+      // 只有当配置了autoRecord为true时才启用自动录制
+      if (this.config.record.autoRecord === true) {
+        Context.eventEmitter.on("postPublish", (session) => {
+          let filePath = path.join(this.config.record.path, session.streamPath, Date.now() + ".flv");
+          let sess = new NodeRecordSession(session, filePath);
+          sess.run();
+        });
+        logger.info("Auto recording enabled - streams will be recorded automatically when published");
+      } else {
+        logger.info("Auto recording disabled - use the HTTP API to control recording");
+      }
     }
   }
 
