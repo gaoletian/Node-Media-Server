@@ -24,5 +24,13 @@
         "port": 8443,
         "key": "./key.pem",
         "cert": "./cert.pem"
+    },
+    "static": {
+        "router": "/",
+        "root": "./html"
+    },
+    "record": {
+        "path": "./html/record",
+        "autoRecord": false
     }
 }
