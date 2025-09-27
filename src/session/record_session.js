@@ -230,13 +230,13 @@ class NodeRecordSession extends BaseSession {
       // 属性值
       scriptData[offset++] = type;
       switch (type) {
-        case AMF_NUMBER:
-          scriptData.writeDoubleBE(value, offset);
-          offset += 8;
-          break;
-        case AMF_BOOLEAN:
-          scriptData[offset++] = value ? 0x01 : 0x00;
-          break;
+      case AMF_NUMBER:
+        scriptData.writeDoubleBE(value, offset);
+        offset += 8;
+        break;
+      case AMF_BOOLEAN:
+        scriptData[offset++] = value ? 0x01 : 0x00;
+        break;
       }
     };
 
@@ -268,7 +268,7 @@ class NodeRecordSession extends BaseSession {
     
     try {
       // 打开文件进行更新
-      const fd = await fs.promises.open(this.filePath, 'r+');
+      const fd = await fs.promises.open(this.filePath, "r+");
       
       // 定位到 MetaData 位置（跳过 Tag 头部）
       await fd.write(newMetaData, 0, newMetaData.length, this.metaDataPosition + 11);
@@ -281,7 +281,7 @@ class NodeRecordSession extends BaseSession {
       if (error instanceof Error) {
         logger.error(`Failed to update FLV metadata: ${error.message}`);
       } else {
-        logger.error('Failed to update FLV metadata: Unknown error');
+        logger.error("Failed to update FLV metadata: Unknown error");
       }
     }
   }
