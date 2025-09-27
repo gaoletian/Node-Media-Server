@@ -31,17 +31,22 @@ class NodeHttpServer {
     recordApiServer.attachToApp(app);
 
     // 配置CORS
-    // @ts-ignore
-    app.use(cors({
+    const corsOptions = {
       origin: config.http?.cors?.origin || '*', // 允许的源，默认允许所有
       methods: config.http?.cors?.methods || ['GET', 'POST', 'OPTIONS'], // 允许的HTTP方法
       allowedHeaders: config.http?.cors?.allowedHeaders || ['Content-Type', 'Authorization'], // 允许的请求头
-      credentials: config.http?.cors?.credentials || true // 允许携带凭证
-    }));
+      credentials: config.http?.cors?.credentials || true, // 允许携带凭证
+      exposedHeaders: ['Content-Length', 'Content-Range'], // 允许客户端访问的响应头
+      maxAge: 86400, // 预检请求的结果可以缓存多久（秒）
+    };
 
+    // 确保所有路由都使用相同的CORS配置
+    // @ts-ignore
+    app.use(cors(corsOptions));
+    
     // 处理 OPTIONS 请求
     // @ts-ignore
-    app.options('*', cors());
+    app.options('*', cors(corsOptions));
 
     // @ts-ignore
     app.all("/:app/:name.flv", this.handleFlv);

@@ -32,8 +32,18 @@ class NodeRecordApiServer {
       return;
     }
 
+    // 在每个响应中添加CORS头
+    const addCorsHeaders = (/** @type {Response} */ res) => {
+      res.header('Access-Control-Allow-Origin', this.config.http?.cors?.origin || '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Max-Age', '86400');
+    };
+
     // 开始录制
     app.post("/api/record/start/:app/:name", /** @param {Request} req @param {Response} res */ (req, res) => {
+      addCorsHeaders(res);
       const streamPath = `/${req.params.app}/${req.params.name}`;
       const broadcast = Context.broadcasts.get(streamPath);
       
@@ -62,6 +72,7 @@ class NodeRecordApiServer {
 
     // 暂停录制
     app.post("/api/record/pause/:sessionId", /** @param {Request} req @param {Response} res */ (req, res) => {
+      addCorsHeaders(res);
       const sessionId = req.params.sessionId;
       const session = Context.getSession(sessionId);
       
@@ -86,6 +97,7 @@ class NodeRecordApiServer {
 
     // 恢复录制
     app.post("/api/record/resume/:sessionId", /** @param {Request} req @param {Response} res */ (req, res) => {
+      addCorsHeaders(res);
       const sessionId = req.params.sessionId;
       const session = Context.getSession(sessionId);
       
@@ -110,6 +122,7 @@ class NodeRecordApiServer {
 
     // 停止录制
     app.post("/api/record/stop/:sessionId", /** @param {Request} req @param {Response} res */ (req, res) => {
+      addCorsHeaders(res);
       const sessionId = req.params.sessionId;
       const session = Context.getSession(sessionId);
       
