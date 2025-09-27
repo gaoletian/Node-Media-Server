@@ -32,11 +32,11 @@ class NodeHttpServer {
 
     // 配置CORS
     const corsOptions = {
-      origin: config.http?.cors?.origin || '*', // 允许的源，默认允许所有
-      methods: config.http?.cors?.methods || ['GET', 'POST', 'OPTIONS'], // 允许的HTTP方法
-      allowedHeaders: config.http?.cors?.allowedHeaders || ['Content-Type', 'Authorization'], // 允许的请求头
+      origin: config.http?.cors?.origin || "*", // 允许的源，默认允许所有
+      methods: config.http?.cors?.methods || ["GET", "POST", "OPTIONS"], // 允许的HTTP方法
+      allowedHeaders: config.http?.cors?.allowedHeaders || ["Content-Type", "Authorization"], // 允许的请求头
       credentials: config.http?.cors?.credentials || true, // 允许携带凭证
-      exposedHeaders: ['Content-Length', 'Content-Range'], // 允许客户端访问的响应头
+      exposedHeaders: ["Content-Length", "Content-Range"], // 允许客户端访问的响应头
       maxAge: 86400, // 预检请求的结果可以缓存多久（秒）
     };
 
@@ -46,7 +46,7 @@ class NodeHttpServer {
     
     // 处理 OPTIONS 请求
     // @ts-ignore
-    app.options('*', cors(corsOptions));
+    app.options("*", cors(corsOptions));
 
     // @ts-ignore
     app.all("/:app/:name.flv", this.handleFlv);
