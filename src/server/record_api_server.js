@@ -51,8 +51,12 @@ class NodeRecordApiServer {
           sessionId: session.id,
           filePath: session.filePath
         });
-      } catch (/** @type {Error} */ error) {
-        res.status(500).json({ error: error.message });
+      } catch (/** @type {unknown} */ error) {
+        if (error instanceof Error) {
+          res.status(500).json({ error: error.message });
+        } else {
+          res.status(500).json({ error: "An unknown error occurred" });
+        }
       }
     });
 
@@ -61,15 +65,22 @@ class NodeRecordApiServer {
       const sessionId = req.params.sessionId;
       const session = Context.getSession(sessionId);
       
-      if (!session || session.protocol !== "flv") {
-        return res.status(404).json({ error: "Record session not found" });
+      if (!session) {
+        return res.status(404).json({ error: `Record session not found with id: ${sessionId}` });
+      }
+      if (session.protocol !== "flv") {
+        return res.status(400).json({ error: "Invalid session type. Expected a recording session" });
       }
 
       try {
         session.pause();
         res.json({ success: true });
-      } catch (/** @type {Error} */ error) {
-        res.status(500).json({ error: error.message });
+      } catch (/** @type {unknown} */ error) {
+        if (error instanceof Error) {
+          res.status(500).json({ error: error.message });
+        } else {
+          res.status(500).json({ error: "An unknown error occurred" });
+        }
       }
     });
 
@@ -78,15 +89,22 @@ class NodeRecordApiServer {
       const sessionId = req.params.sessionId;
       const session = Context.getSession(sessionId);
       
-      if (!session || session.protocol !== "flv") {
-        return res.status(404).json({ error: "Record session not found" });
+      if (!session) {
+        return res.status(404).json({ error: `Record session not found with id: ${sessionId}` });
+      }
+      if (session.protocol !== "flv") {
+        return res.status(400).json({ error: "Invalid session type. Expected a recording session" });
       }
 
       try {
         session.resume();
         res.json({ success: true });
-      } catch (/** @type {Error} */ error) {
-        res.status(500).json({ error: error.message });
+      } catch (/** @type {unknown} */ error) {
+        if (error instanceof Error) {
+          res.status(500).json({ error: error.message });
+        } else {
+          res.status(500).json({ error: "An unknown error occurred" });
+        }
       }
     });
 
@@ -95,15 +113,22 @@ class NodeRecordApiServer {
       const sessionId = req.params.sessionId;
       const session = Context.getSession(sessionId);
       
-      if (!session || session.protocol !== "flv") {
-        return res.status(404).json({ error: "Record session not found" });
+      if (!session) {
+        return res.status(404).json({ error: `Record session not found with id: ${sessionId}` });
+      }
+      if (session.protocol !== "flv") {
+        return res.status(400).json({ error: "Invalid session type. Expected a recording session" });
       }
 
       try {
         session.stop();
         res.json({ success: true });
-      } catch (/** @type {Error} */ error) {
-        res.status(500).json({ error: error.message });
+      } catch (/** @type {unknown} */ error) {
+        if (error instanceof Error) {
+          res.status(500).json({ error: error.message });
+        } else {
+          res.status(500).json({ error: "An unknown error occurred" });
+        }
       }
     });
   }

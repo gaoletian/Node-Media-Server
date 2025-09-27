@@ -52,6 +52,9 @@ class NodeRecordSession extends BaseSession {
   }
 
   run() {
+    // 注册会话到全局 Context
+    Context.sessions.set(this.id, this);
+    
     this.broadcast.postPlay(this);
     logger.info(`Record session ${this.id} ${this.streamPath} start record ${this.filePath}`);
     Context.eventEmitter.emit("postRecord", this);
@@ -59,6 +62,7 @@ class NodeRecordSession extends BaseSession {
       if (session.streamPath === this.streamPath) {
         this.fileStream.close();
         this.broadcast.donePlay(this);
+        Context.sessions.delete(this.id); // 清理会话
         logger.info(`Record session ${this.id} ${this.streamPath} done record ${this.filePath}`);
         Context.eventEmitter.emit("doneRecord", this);
       }
@@ -141,6 +145,8 @@ class NodeRecordSession extends BaseSession {
     this.fileStream.end();
     // 从订阅者列表中移除此录制会话
     this.broadcast.subscribers.delete(this.id);
+    // 从全局 Context 中移除会话
+    Context.sessions.delete(this.id);
     logger.info(`Record session ${this.id} ${this.streamPath} stopped`);
     // 发送录制完成事件
     Context.eventEmitter.emit("doneRecord", this);
