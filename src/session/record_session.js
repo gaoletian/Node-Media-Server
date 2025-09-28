@@ -12,15 +12,6 @@ const BaseSession = require("./base_session");
 const BroadcastServer = require("../server/broadcast_server.js");
 const Context = require("../core/context.js");
 
-// AMF 数据类型
-const AMF_NUMBER = 0x00;
-const AMF_BOOLEAN = 0x01;
-const AMF_STRING = 0x02;
-const AMF_OBJECT = 0x03;
-const AMF_NULL = 0x05;
-const AMF_ARRAY = 0x08;
-const AMF_END = 0x09;
-
 /**
  * @class
  * @augments BaseSession
@@ -192,110 +183,11 @@ class NodeRecordSession extends BaseSession {
   }
 
   /**
-   * 生成 MetaData Buffer
-   * @returns {Buffer}
-   */
-  generateMetaData() {
-    const metaData = {
-      duration: this.duration / 1000, // 转换为秒
-      filesize: this.fileOffset,
-      hasAudio: this.hasAudio,
-      hasVideo: this.hasVideo,
-      hasMetadata: true,
-      canSeekToEnd: true
-    };
-
-    // 创建 Script Tag
-    const scriptData = Buffer.alloc(1024);
-    let offset = 0;
-
-    // 写入 AMF String: "onMetaData"
-    scriptData[offset++] = AMF_STRING;
-    scriptData[offset++] = 0x00;
-    scriptData[offset++] = 0x0A;
-    scriptData.write("onMetaData", offset);
-    offset += 10;
-
-    // 写入 AMF Object 开始
-    scriptData[offset++] = AMF_OBJECT;
-
-    // 写入各个属性
-    const writeProperty = (/** @type {string} */ name, /** @type {any} */ value, /** @type {number} */ type) => {
-      // 属性名
-      scriptData[offset++] = 0x00;
-      scriptData[offset++] = name.length;
-      scriptData.write(name, offset);
-      offset += name.length;
-
-      // 属性值
-      scriptData[offset++] = type;
-      switch (type) {
-      case AMF_NUMBER:
-        scriptData.writeDoubleBE(value, offset);
-        offset += 8;
-        break;
-      case AMF_BOOLEAN:
-        scriptData[offset++] = value ? 0x01 : 0x00;
-        break;
-      }
-    };
-
-    // 写入所有元数据属性
-    writeProperty("duration", metaData.duration, AMF_NUMBER);
-    writeProperty("filesize", metaData.filesize, AMF_NUMBER);
-    writeProperty("hasAudio", metaData.hasAudio, AMF_BOOLEAN);
-    writeProperty("hasVideo", metaData.hasVideo, AMF_BOOLEAN);
-    writeProperty("hasMetadata", metaData.hasMetadata, AMF_BOOLEAN);
-    writeProperty("canSeekToEnd", metaData.canSeekToEnd, AMF_BOOLEAN);
-
-    // 写入 Object 结束标记
-    scriptData[offset++] = 0x00;
-    scriptData[offset++] = 0x00;
-    scriptData[offset++] = AMF_END;
-
-    // 返回裁剪后的buffer
-    return scriptData.slice(0, offset);
-  }
-
-  /**
-   * 更新文件元数据
-   */
-  async updateMetaData() {
-    if (this.metaDataPosition <= 0) return;
-
-    // 生成新的元数据
-    const newMetaData = this.generateMetaData();
-    
-    try {
-      // 打开文件进行更新
-      const fd = await fs.promises.open(this.filePath, "r+");
-      
-      // 定位到 MetaData 位置（跳过 Tag 头部）
-      await fd.write(newMetaData, 0, newMetaData.length, this.metaDataPosition + 11);
-      
-      // 关闭文件
-      await fd.close();
-      
-      logger.info(`Updated FLV metadata for ${this.filePath}, duration: ${this.duration/1000}s`);
-    } catch (/** @type {unknown} */ error) {
-      if (error instanceof Error) {
-        logger.error(`Failed to update FLV metadata: ${error.message}`);
-      } else {
-        logger.error("Failed to update FLV metadata: Unknown error");
-      }
-    }
-  }
-
-  /**
    * 停止录制
    */
   async stop() {
     // 关闭文件流
     this.fileStream.end();
-    
-    // 更新元数据
-    await this.updateMetaData();
-    
     // 从订阅者列表中移除此录制会话
     this.broadcast.subscribers.delete(this.id);
     // 从全局 Context 中移除会话
