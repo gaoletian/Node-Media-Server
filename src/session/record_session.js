@@ -31,9 +31,6 @@ class NodeRecordSession extends BaseSession {
     this.streamPath = session.streamPath;
     this.filePath = filePath;
     this.fileStream = this.createWriteStreamWithDirsSync(filePath);
-    this.isPaused = false;
-    this.pauseStartTime = 0;
-    this.totalPausedTime = 0;
     this.lastVideoTimestamp = 0;
     this.lastAudioTimestamp = 0;
     this.startTime = 0;
@@ -83,10 +80,6 @@ class NodeRecordSession extends BaseSession {
    * @param {Buffer} buffer
    */
   sendBuffer = (buffer) => {
-    if (this.isPaused) {
-      return;
-    }
-
     // 检测包类型和时间戳
     if (buffer.length > 11) {  // FLV tag header size
       const tagType = buffer[0];  // 8:audio, 9:video, 18:script
@@ -122,8 +115,8 @@ class NodeRecordSession extends BaseSession {
 
         // 调整时间戳
         if (this.startTime > 0) {
-          // 减去开始时间和暂停时间
-          timestamp = timestamp - this.startTime - this.totalPausedTime;
+          // 减去开始时间
+          timestamp = timestamp - this.startTime;
           if (timestamp < 0) timestamp = 0;
 
           // 写回调整后的时间戳 (24位)
@@ -152,35 +145,6 @@ class NodeRecordSession extends BaseSession {
     this.fileOffset += buffer.length;
     this.fileStream.write(buffer);
   };
-
-  /**
-   * 暂停录制
-   */
-  pause() {
-    if (this.isPaused) {
-      throw new Error("Record session is already paused");
-    }
-    this.isPaused = true;
-    this.pauseStartTime = Date.now();
-    logger.info(`Record session ${this.id} ${this.streamPath} paused`);
-  }
-
-  /**
-   * 恢复录制
-   */
-  resume() {
-    if (!this.isPaused) {
-      throw new Error("Record session is not paused");
-    }
-    
-    // 计算本次暂停的时间（毫秒）
-    const pauseDuration = Date.now() - this.pauseStartTime;
-    this.totalPausedTime += Math.floor(pauseDuration);
-    
-    this.isPaused = false;
-    this.pauseStartTime = 0;
-    logger.info(`Record session ${this.id} ${this.streamPath} resumed, pause duration: ${pauseDuration}ms, total paused: ${this.totalPausedTime}ms`);
-  }
 
   /**
    * 停止录制

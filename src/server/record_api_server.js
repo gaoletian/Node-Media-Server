@@ -73,62 +73,6 @@ class NodeRecordApiServer {
         }
       });
 
-    // 暂停录制
-    app.post("/api/record/pause/:sessionId", /**
-                                              * @param {Request} req @param {Response} res
-                                              * @param res
-                                              */ (req, res) => {
-        addCorsHeaders(res);
-        const sessionId = req.params.sessionId;
-        const session = Context.getSession(sessionId);
-      
-        if (!session) {
-          return res.status(404).json({ error: `Record session not found with id: ${sessionId}` });
-        }
-        if (session.protocol !== "flv") {
-          return res.status(400).json({ error: "Invalid session type. Expected a recording session" });
-        }
-
-        try {
-          session.pause();
-          res.json({ success: true });
-        } catch (/** @type {unknown} */ error) {
-          if (error instanceof Error) {
-            res.status(500).json({ error: error.message });
-          } else {
-            res.status(500).json({ error: "An unknown error occurred" });
-          }
-        }
-      });
-
-    // 恢复录制
-    app.post("/api/record/resume/:sessionId", /**
-                                               * @param {Request} req @param {Response} res
-                                               * @param res
-                                               */ (req, res) => {
-        addCorsHeaders(res);
-        const sessionId = req.params.sessionId;
-        const session = Context.getSession(sessionId);
-      
-        if (!session) {
-          return res.status(404).json({ error: `Record session not found with id: ${sessionId}` });
-        }
-        if (session.protocol !== "flv") {
-          return res.status(400).json({ error: "Invalid session type. Expected a recording session" });
-        }
-
-        try {
-          session.resume();
-          res.json({ success: true });
-        } catch (/** @type {unknown} */ error) {
-          if (error instanceof Error) {
-            res.status(500).json({ error: error.message });
-          } else {
-            res.status(500).json({ error: "An unknown error occurred" });
-          }
-        }
-      });
-
     // 停止录制
     app.post("/api/record/stop/:sessionId", /**
                                              * @param {Request} req @param {Response} res
